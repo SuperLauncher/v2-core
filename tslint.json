@@ -1,0 +1,12 @@
+{
+  "extends": ["tslint-config-prettier"],
+  "rulesDirectory": ["tslint-plugin-prettier"],
+  "rules": {
+    "prettier": false,
+    "max-line-length": [true, 150],
+    "import-name": false
+  },
+  "linterOptions": {
+    "exclude": ["src/migration/**", "src/contracts/ABI/**"]
+  }
+}
