@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.10;
 
 library DataTypes {
     
@@ -99,6 +99,13 @@ library DataTypes {
         uint leftOverAmount;
         uint winnerStartIndex;
     }
+
+    struct TallyLotteryRandom {
+        bool initialized;
+        uint requestTime;
+        uint value;
+        bool valid;
+    }
     
     struct LotteryData {
         uint totalAllocatedAmount; // Unit in currency.
@@ -110,6 +117,7 @@ library DataTypes {
         uint count;
         
         LotteryData data;
+        TallyLotteryRandom random;
         TallyLotteryResult result;
     }
 

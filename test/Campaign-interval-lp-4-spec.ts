@@ -43,11 +43,11 @@ makeSuite('Campaign-lp-4', (testEnv: TestEnv) => {
 
 	// 2) .MAX (use soft cap as LP provision)
 	//5% Fee, campaign just hit soft cap.
-// - - after finishUp, 95% of the bnb is used to provide LP.
-//  This means that there’s 5% of the XYZ tokens for LP that is not used.
-//   This amount will be returned to campaign owner during finishUp()
+	// - - after finishUp, 95% of the bnb is used to provide LP.
+	//  This means that there’s 5% of the XYZ tokens for LP that is not used.
+	//   This amount will be returned to campaign owner during finishUp()
 	it('After finishUp, campaign owner get back 95% of his raised bnb', async () => {
-		const { admin, users, BUSD, manager } = testEnv;
+		const { admin, users, BUSD, manager, RandomProvider } = testEnv;
 		const user1 = users[0]
 		const user2 = users[1]
 		//approval
@@ -66,6 +66,10 @@ makeSuite('Campaign-lp-4', (testEnv: TestEnv) => {
 		await advanceBlock(info[0].subEnd.toNumber());
 
 		expect(await main.getCurrentPeriod()).to.be.equals(Period.Setup);
+		//mock random value
+		await RandomProvider.setRequestId(ethers.utils.formatBytes32String("ok"), main.address);
+		await main.connect(admin).tallyPrepare();
+		await RandomProvider.fulfillRandomness(ethers.utils.formatBytes32String("ok"), "36182639440450741575202689230877903979908723051233706145827570538348168242976");
 		await waitForTx(
 			await main.connect(admin).tallySubscriptionAuto()
 		);

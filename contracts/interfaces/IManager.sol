@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.10;
 
 import "./IRoleAccess.sol";
+import "./IRandomProvider.sol";
 
 
 interface IManager {
@@ -11,5 +12,6 @@ interface IManager {
     function getSvLaunchAddress() external view returns (address);
     function getEggAddress() external view returns (address);
     function getRoles() external view returns (IRoleAccess);
+    function getRandomProvider() external view returns (IRandomProvider);
 }
 

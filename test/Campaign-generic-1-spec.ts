@@ -50,11 +50,14 @@ makeSuite('Campaign-generic-1-test', (testEnv: TestEnv) => {
 	});
 
 	it('Should able to tally', async () => {
-		const { admin } = testEnv;
+		const { admin, RandomProvider } = testEnv;
 		const info = await main.getCampaignInfo();
 		//tally
 		await advanceBlock(info[0].subEnd.toNumber());
 		expect(await main.getCurrentPeriod()).to.be.equals(Period.Setup);
+		await RandomProvider.setRequestId(ethers.utils.formatBytes32String("ok"), main.address);
+		await main.connect(admin).tallyPrepare();
+		await RandomProvider.fulfillRandomness(ethers.utils.formatBytes32String("ok"), "36182639440450741575202689230877903979908723051233706145827570538348168242976");
 		await main.connect(admin).tallySubscriptionAuto();
 	});
 });

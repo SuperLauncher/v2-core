@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.10;
 
 import "../lib/DataTypes.sol";
 import "../lib/Constant.sol";
@@ -13,6 +13,8 @@ contract DataStore {
         
     DataTypes.Store private _dataStore;
     
+    event ApproveConfig(bool approve);
+
     //--------------------//
     // EXTERNAL FUNCTIONS //
     //--------------------//
@@ -180,6 +182,7 @@ contract DataStore {
     
     function _setConfigApproved(bool approved) internal {
         _setState(DataTypes.Ok.Config, approved);
+        emit ApproveConfig(approved);
     }
 
     function _isBnbCurrency() internal view returns (bool) {

@@ -3,7 +3,7 @@ import { ethers } from "hardhat";
 
 async function main() {
 	
-	const managerAddress = "0x31F3E72971e73a022c4609807c88927C96b00E6a";
+	const managerAddress = "0x754815fc857AC3F309185352E85Cd1dCD346b87e";
 
 	const Manager = await ethers.getContractFactory("Manager");
 	const manager = await Manager.attach(managerAddress);

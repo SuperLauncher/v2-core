@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.10;
 
 import "./core/MainWorkflow.sol";
 import "./interfaces/ICampaign.sol";
+import "./interfaces/IRandomProvider.sol";
 
 contract Campaign is ICampaign, MainWorkflow {
 
     using Generic for *;
+    using Lottery for *;
     using Live for DataTypes.Live;
     using LpProvision for DataTypes.Lp;
     using Vesting for DataTypes.Vesting;
@@ -18,14 +20,14 @@ contract Campaign is ICampaign, MainWorkflow {
     modifier init() {
         _require(_isConfigurator() && _canInitialize(), Error.Code.CannotInitialize);
         _;
-        _setState(DataTypes.Ok.Config, false);
+        _setConfigApproved(false);
         _setState(DataTypes.Ok.BasicSetup, true);
     }
     
     modifier configure() {
         _require(_isConfigurator() && _canConfigure(), Error.Code.CannotConfigure);
         _;
-        _setState(DataTypes.Ok.Config, false);
+        _setConfigApproved(false);
     }
     
     modifier onlyCampaignOwner() {
@@ -42,7 +44,15 @@ contract Campaign is ICampaign, MainWorkflow {
         _require(_campaignOwner == msg.sender || _isConfigurator(), Error.Code.NoRights);
         _;
     }
-    
+
+    event Finalize();
+    event FundIn(uint amount);
+    event FundOut(uint amount);
+    event TallySubscriptionAuto();
+    event TallySubscriptionManual(uint splitRatio);
+    event AddAndLockLP(bool overrideStartVest, bool bypassSwap);
+    event ClaimFunds();
+    event ClaimUnlockedLP(uint index);
     
     //--------------------//
     // EXTERNAl FUNCTIONS //
@@ -100,24 +110,36 @@ contract Campaign is ICampaign, MainWorkflow {
     function finalize() external onlyDeployer notAborted {
         _require(getState(DataTypes.Ok.Config), Error.Code.UnApprovedConfig);
         _setState(DataTypes.Ok.Finalized, true);
+        emit Finalize();
     }
     
     function fundIn(uint amtAcknowledged) external onlyCampaignOwner {
         _fundIn(amtAcknowledged);
+        emit FundIn(amtAcknowledged);
     }
     
     function fundOut(uint amtAcknowledged) external onlyCampaignOwner {
         _fundOut(amtAcknowledged);
+        emit FundOut(amtAcknowledged);
     }
     
+    function tallyPrepare() external onlyDeployer notAborted {
+        // Call chainlink VRF to get a random number for the Lottery winner index.
+        // Note: This request has a time window. If network is congested & data arrived late, 0 index will be used.
+        _lottery().initRandomValue();
+        _manager.getRandomProvider().requestRandom();
+    }
+
     function tallySubscriptionAuto() external onlyDeployer notAborted {
         (, uint a, uint b) = peekTally();
         uint ratio = (a==0 && b==0) ? Constant.PCNT_50 : (a * Constant.PCNT_100) / (a + b);
         _tallySubscription(ratio);
+        emit TallySubscriptionAuto();
     }
     
     function tallySubscriptionManual(uint splitRatio) external onlyDeployer notAborted {
         _tallySubscription(splitRatio);
+        emit TallySubscriptionManual(splitRatio);
     }
 
     function addRemovePrivateWhitelist(address[] calldata addresses, uint tier, bool add) external campaignOwnerOrConfigurator {
@@ -130,7 +152,7 @@ contract Campaign is ICampaign, MainWorkflow {
     }
     
     // Note: overrideStartVest: if set to true, will change the vesting's desiredUnlockTime to current time once LP is provided.
-    function addAndLockLP(bool overrideStartVest, bool bypassSwap) public onlyDeployer {
+    function addAndLockLP(bool overrideStartVest, bool bypassSwap) external onlyDeployer {
         _require(getState(DataTypes.Ok.FinishedUp), Error.Code.CannotCreateLp);
         
         // Note: getLpFund() will return the raisedAmount after deducting for fee
@@ -145,6 +167,8 @@ contract Campaign is ICampaign, MainWorkflow {
          _transferOut(_campaignOwner, tokenUnsed, DataTypes.FundType.Token);
         // return un-used fund in either WBNB (if swapped) or in currency
         _transferOut(_campaignOwner, fundUnused, _lp().swap.swapped ? DataTypes.FundType.WBnb : DataTypes.FundType.Currency);
+    
+        emit AddAndLockLP(overrideStartVest, bypassSwap);
     }
     
     function claimTokens() external  {
@@ -153,12 +177,15 @@ contract Campaign is ICampaign, MainWorkflow {
     
     function claimFunds() external onlyCampaignOwner  {
         _claim(false);
+        emit ClaimFunds();
     }
     
     function claimUnlockedLp(uint index) external onlyCampaignOwner notAborted {
         _require(getState(DataTypes.Ok.LpCreated), Error.Code.LpNotCreated);
         uint amt = _lp().claimUnlockedLp(index);
         _history().record(DataTypes.ActionType.ClaimLp, msg.sender, index, amt, false);
+
+        emit ClaimUnlockedLP(index);
     }
     
     // Implements ICampaign
@@ -177,7 +204,16 @@ contract Campaign is ICampaign, MainWorkflow {
         _require(msg.sender == address(_manager), Error.Code.NoRights);
         _transferOut(to, tokenAddress, amount);
     }
-    
+
+    // Call from RandomProvider when chainlink returns a random number from VRF
+    function sendRandomValueForLottery(uint value) external {
+        // Check that it is called from RandomProvider
+        _require(msg.sender == address(_manager.getRandomProvider()), Error.Code.NoRights);
+
+        // Update the result for Lottery //
+         _lottery().setRandomValue(value);
+    }
+
     //--------------------//
     // PRIVATE FUNCTIONS //
     //--------------------//

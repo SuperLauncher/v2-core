@@ -12,7 +12,7 @@ makeSuite('Campaign-refund-1', (testEnv: TestEnv) => {
 	var main: Campaign;
 	var token: MintableToken;
 	before(async () => {
-		const { admin, manager, factory, XYX} = testEnv;
+		const { admin, manager, factory, XYX } = testEnv;
 		token = XYX;
 		main = (await deployCampaignGeneric(manager,
 			admin,
@@ -22,7 +22,7 @@ makeSuite('Campaign-refund-1', (testEnv: TestEnv) => {
 	});
 
 	it('Should able to refund', async () => {
-		const { admin, users } = testEnv;
+		const { admin, users, RandomProvider } = testEnv;
 		const info = await main.getCampaignInfo();
 
 		//start Sub
@@ -41,6 +41,11 @@ makeSuite('Campaign-refund-1', (testEnv: TestEnv) => {
 			{ value: ethers.utils.parseEther("0.4") });
 		//tally
 		await advanceBlock(info[0].subEnd.add(10).toNumber());
+		//mock random value
+		await RandomProvider.setRequestId(ethers.utils.formatBytes32String("ok"), main.address);
+		await main.connect(admin).tallyPrepare();
+		await RandomProvider.fulfillRandomness(ethers.utils.formatBytes32String("ok"), "36182639440450741575202689230877903979908723051233706145827570538348168242976");
+
 		await waitForTx(
 			await main.connect(admin).tallySubscriptionAuto()
 		);

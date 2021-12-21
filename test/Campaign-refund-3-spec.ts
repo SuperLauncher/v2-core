@@ -26,7 +26,7 @@ makeSuite('Campaign-refund-3', (testEnv: TestEnv) => {
 	});
 
 	it('Should able to refund bnb & egg when campaign cancelled', async () => {
-		const { admin, manager, users, eggV2 } = testEnv;
+		const { admin, manager, users, eggV2, RandomProvider } = testEnv;
 		const info = await main.getCampaignInfo();
 		//start Sub
 		await advanceBlock(info[0].subStart.toNumber());
@@ -63,6 +63,11 @@ makeSuite('Campaign-refund-3', (testEnv: TestEnv) => {
 
 		//tally
 		await advanceBlock(info[0].subEnd.toNumber());
+		//mock random value
+		await RandomProvider.setRequestId(ethers.utils.formatBytes32String("ok"), main.address);
+		await main.connect(admin).tallyPrepare();
+		await RandomProvider.fulfillRandomness(ethers.utils.formatBytes32String("ok"), "36182639440450741575202689230877903979908723051233706145827570538348168242976");
+
 		await waitForTx(
 			await main.connect(admin).tallySubscriptionAuto()
 		);

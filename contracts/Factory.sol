@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.10;
 
 import "./Campaign.sol";
 
 contract Factory {
     
     IManager private _manager;
+
+
+    event CreateCampaign(uint index, address projectOwner, address newCampaign);
 
     constructor(IManager manager) {
         _manager = manager;
@@ -17,6 +20,7 @@ contract Factory {
             bytes32 salt = keccak256(abi.encodePacked(index, projectOwner, msg.sender));
             address newAddress = address(new Campaign{salt: salt}(_manager, projectOwner));
             _manager.addCampaign(newAddress, projectOwner);
+            emit CreateCampaign(index, projectOwner, newAddress);
         }
     }
 

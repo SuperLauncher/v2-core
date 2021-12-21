@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.10;
 
 import "../lib/DataTypes.sol";
 import "../lib/Error.sol";
+import "../lib/Constant.sol";
 
 library Lottery {
 
@@ -20,7 +21,30 @@ library Lottery {
         return param.data.eachAllocationAmount * param.count;
     }
 
+    function initRandomValue(DataTypes.Lottery storage param) external {
+        param.random.requestTime = block.timestamp;
+        param.random.initialized = true;
+    }
+
+    function readyForTally(DataTypes.Lottery storage param) public view returns (bool) {
+        bool elapsed = param.random.initialized && (block.timestamp - param.random.requestTime) > Constant.VRF_TIME_WINDOW;
+        return ( param.random.valid || elapsed);
+    }
+
+    function setRandomValue(DataTypes.Lottery storage param, uint value) external {
+        // If the random value came after the time-window, the this value will not be used
+        bool onTime = (block.timestamp - param.random.requestTime) < Constant.VRF_TIME_WINDOW;
+
+        // If random value is > 0
+        param.random.value = onTime ? value : 0;
+        param.random.valid = onTime;
+    }
+
     function tally(DataTypes.Lottery storage param, uint allocAmt) external {
+
+        // Has chainlink provided the random number ? Or has time window elapsed ?
+        _require(readyForTally(param), Error.Code.NotReady);
+
         _require(!param.data.tallyCompleted, Error.Code.NotReady);
         param.data.tallyCompleted = true;
 
@@ -41,7 +65,7 @@ library Lottery {
         
         // pick random index if needed //
         if (numWinners < param.count) {
-            param.result.winnerStartIndex = randomIndex(param.count); 
+            param.result.winnerStartIndex = param.random.value % param.count; 
         }
     }
     
@@ -83,11 +107,8 @@ library Lottery {
         (bool participated, bool won, uint amt) = isWinner(param, user);
         return ( (participated && !won) ? amt : 0 );
     }
-    
-    function randomIndex(uint range) public view returns (uint) {
-        return  uint(keccak256(abi.encodePacked(range, msg.sender, block.difficulty, block.timestamp))) % range;
-    }
-    
+
+
     function _require(bool condition, Error.Code err) pure private {
         require(condition, Error.str(err));
     }

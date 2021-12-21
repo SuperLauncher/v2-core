@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.10;
 
 
 import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
@@ -12,6 +12,8 @@ contract RolesRegistry is IRoleAccess, AccessControlEnumerable {
     bytes32 private constant IDO_CONFIGURATOR_ROLE = keccak256("IDO_CONFIGURATOR_ROLE");
     bytes32 private constant IDO_APPROVER_ROLE = keccak256("IDO_APPROVER_ROLE");
     
+    event SetRoleRegistry(bytes32 role, address user, string state);
+
     constructor()  {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
@@ -75,8 +77,10 @@ contract RolesRegistry is IRoleAccess, AccessControlEnumerable {
         if (on != hasRole(role, user)) {
             if (on) {
                 grantRole(role, user);
+                emit SetRoleRegistry(role, user, "Grant Role");
             } else {
                 revokeRole(role, user);
+                emit SetRoleRegistry(role, user, "Revoke Role");
             }
         }
     }

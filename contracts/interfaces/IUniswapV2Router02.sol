@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.10;
 
 interface IUniswapV2Router02 {
     function addLiquidityETH(
@@ -36,4 +36,8 @@ interface IUniswapV2Router02 {
         uint deadline
     ) external returns (uint[] memory amounts);
 
+    function getAmountsOut(
+        uint amountIn, 
+        address[] calldata path
+    ) external view returns (uint[] memory amounts);
 }

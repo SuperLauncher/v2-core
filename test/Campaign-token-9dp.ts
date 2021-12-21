@@ -11,7 +11,7 @@ makeSuite('Campaign-generic-9dp-test', (testEnv: TestEnv) => {
 	var main: Campaign;
 	var token: MintableToken;
 	before(async () => {
-		const { admin, manager, factory, Token9dp} = testEnv;
+		const { admin, manager, factory, Token9dp } = testEnv;
 		token = Token9dp;
 		main = (await deployCampaignWith9DPToken(manager,
 			admin,
@@ -21,7 +21,7 @@ makeSuite('Campaign-generic-9dp-test', (testEnv: TestEnv) => {
 	});
 
 	it('Should able to subscribe', async () => {
-		const { admin, users } = testEnv;
+		const { admin, users, RandomProvider } = testEnv;
 
 		const info = await main.getCampaignInfo();
 		//start Sub
@@ -48,12 +48,18 @@ makeSuite('Campaign-generic-9dp-test', (testEnv: TestEnv) => {
 
 		//tally
 		await advanceBlock(info[0].subEnd.toNumber());
+
+		//mock random value
+		await RandomProvider.setRequestId(ethers.utils.formatBytes32String("ok"), main.address);
+		await main.connect(admin).tallyPrepare();
+		await RandomProvider.fulfillRandomness(ethers.utils.formatBytes32String("ok"), "36182639440450741575202689230877903979908723051233706145827570538348168242976");
+
 		await main.connect(admin).tallySubscriptionAuto()
 
 		//user1 buy 1 bnb
 		await advanceBlock(info[0].idoStart.add(61).toNumber());
 
-		await main.connect(user1.signer).buyTokens(ethers.utils.parseEther("1"),{ value: ethers.utils.parseEther("1") });
+		await main.connect(user1.signer).buyTokens(ethers.utils.parseEther("1"), { value: ethers.utils.parseEther("1") });
 
 		await advanceBlock(info[0].idoEnd.toNumber());
 
@@ -75,14 +81,14 @@ makeSuite('Campaign-generic-9dp-test', (testEnv: TestEnv) => {
 		const claim = await main.getClaimableByIntervals(user1.address, true);
 		expect(claim.claimedSoFar.toString()).to.be.equal(parseTokenWithDP("0", 18).toString());
 		expect(claim.claimable.toString()).to.be.equal(parseTokenWithDP("0.374", 18).toString());
-	
+
 		await main.connect(user1.signer).claimTokens();
 
 		let balanceAT = await token.balanceOf(user1.address);
 
 		expect(balanceAT.toString()).to.be.equals(parseTokenWithDP("37400", 9).toString());
 
-		await advanceBlock(info[0].idoEnd.add(60+300).toNumber());
+		await advanceBlock(info[0].idoEnd.add(60 + 300).toNumber());
 
 		const claim2 = await main.getClaimableByIntervals(user1.address, true);
 		expect(claim2.claimedSoFar.toString()).to.be.equal(parseTokenWithDP("0.374", 18).toString());
@@ -94,7 +100,7 @@ makeSuite('Campaign-generic-9dp-test', (testEnv: TestEnv) => {
 
 		expect(balanceAT.toString()).to.be.equals(parseTokenWithDP("73700", 9).toString());
 
-		await advanceBlock(info[0].idoEnd.add(60+600).toNumber());
+		await advanceBlock(info[0].idoEnd.add(60 + 600).toNumber());
 
 		const claim3 = await main.getClaimableByIntervals(user1.address, true);
 		expect(claim3.claimedSoFar.toString()).to.be.equal(parseTokenWithDP("0.737", 18).toString());

@@ -20,14 +20,14 @@ makeSuite('Campaign-flow-single-claim-test', (testEnv: TestEnv) => {
 			factory,
 			id++,
 			await admin.getAddress()
-			, token.address, 
+			, token.address,
 			"1",
 			"0x0000000000000000000000000000000000000000",
-			)) as Campaign;
+		)) as Campaign;
 	});
 
 	it('Should able to claim interval', async () => {
-		const { admin, users } = testEnv;
+		const { admin, users, RandomProvider } = testEnv;
 		const info = await main.getCampaignInfo();
 		//start Sub
 		await advanceBlock(info[0].subStart.toNumber());
@@ -38,6 +38,10 @@ makeSuite('Campaign-flow-single-claim-test', (testEnv: TestEnv) => {
 
 		expect(await main.getCurrentPeriod()).to.be.equals(Period.Setup);
 
+		//mock random value
+		await RandomProvider.setRequestId(ethers.utils.formatBytes32String("ok"), main.address);
+		await main.connect(admin).tallyPrepare();
+		await RandomProvider.fulfillRandomness(ethers.utils.formatBytes32String("ok"), "36182639440450741575202689230877903979908723051233706145827570538348168242976");
 		await main.connect(admin).tallySubscriptionAuto()
 
 		//start IDO

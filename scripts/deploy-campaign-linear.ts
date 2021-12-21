@@ -13,7 +13,7 @@ async function main() {
 	const managerAddress = "0x0bBE4a04df17117e593eC34a04179Df435602A84";
 
 	var token = "0xeC3773e6c5DA57A354e1886492172140d2B8205a"
-	const campaignOwner = "0xD507283f873837057Bc551aD9f46cbe60C8C79AA";
+	const campaignOwner = "0x3c16B4237EC2E06b2370Cf4C7a72F0e22d9cdBA3";
 
 	const Manager = await ethers.getContractFactory("Manager");
 	const manager = await Manager.attach(managerAddress);

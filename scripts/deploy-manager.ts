@@ -10,12 +10,12 @@ async function main() {
   
 	console.log("rolesRegistry deployed to:", rolesRegistry.address);
 
-	const deployer = '0xD507283f873837057Bc551aD9f46cbe60C8C79AA';
-	const approver = '0xD507283f873837057Bc551aD9f46cbe60C8C79AA';
-	const configurator = '0xD507283f873837057Bc551aD9f46cbe60C8C79AA';
-	const feeVault = "0xD507283f873837057Bc551aD9f46cbe60C8C79AA";
-	const egg = "0xbA385450b39FB78bC12a710003FDbc0ff0aD18Ea"
-	const svLuanchv2 = "0x75234c92e2d00391eb31fd5d396ac23475828aa2"
+	const deployer = '0x3c16B4237EC2E06b2370Cf4C7a72F0e22d9cdBA3';
+	const approver = '0x3c16B4237EC2E06b2370Cf4C7a72F0e22d9cdBA3';
+	const configurator = '0x3c16B4237EC2E06b2370Cf4C7a72F0e22d9cdBA3';
+	const feeVault = "0x3c16B4237EC2E06b2370Cf4C7a72F0e22d9cdBA3";
+	const egg = "0x222eE62792b60b8dbb1dD321DF75A310053a98ef"
+	const svLuanchv2 = "0xA01db017f58C6A8d949D7A020da357E6B0a5aEC6"
 
 	await rolesRegistry.setDeployer(deployer, true);
 	await rolesRegistry.setApprover(approver, true);
@@ -35,6 +35,20 @@ async function main() {
 	];
 
 	await manager.addCurrency(currency);
+
+	const RandomProvider = await ethers.getContractFactory(
+		"RandomProvider"
+	);
+	const randomProvider = await RandomProvider.deploy(
+		manager.address,
+		"0xa555fC018435bef5A13C6c6870a9d4C11DEC329C",
+		"0xcaf3c3727e033261d383b315559476f48034c13b18f8cafed4d871abe5049186",
+		"0x84b9B910527Ad5C03A9Ca831909E21e236EA7b06"
+		);
+	await randomProvider.deployed();
+
+
+	await manager.setRandomProvider(randomProvider.address);
   }
   
   main()

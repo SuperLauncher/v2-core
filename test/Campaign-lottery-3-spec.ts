@@ -21,7 +21,7 @@ makeSuite('Campaign-lottery-3', (testEnv: TestEnv) => {
 	});
 
 	it('Should able to have correct lottery', async () => {
-		const { admin, users, eggV2, BUSD } = testEnv;
+		const { admin, users, eggV2, BUSD, RandomProvider } = testEnv;
 
 		const info = await main.getCampaignInfo();
 		//start Sub
@@ -42,15 +42,15 @@ makeSuite('Campaign-lottery-3', (testEnv: TestEnv) => {
 		await eggV2.connect(user3.signer).approve(main.address, ethers.utils.parseEther('1000'));
 
 
-				//approval
-				await BUSD.connect(user1.signer).mint(ethers.utils.parseEther("2"));
-				await BUSD.connect(user1.signer).approve(main.address, ethers.utils.parseEther("2"));
-		
-				await BUSD.connect(user2.signer).mint(ethers.utils.parseEther("2"));
-				await BUSD.connect(user2.signer).approve(main.address, ethers.utils.parseEther("2"));
+		//approval
+		await BUSD.connect(user1.signer).mint(ethers.utils.parseEther("2"));
+		await BUSD.connect(user1.signer).approve(main.address, ethers.utils.parseEther("2"));
 
-				await BUSD.connect(user3.signer).mint(ethers.utils.parseEther("2"));
-				await BUSD.connect(user3.signer).approve(main.address, ethers.utils.parseEther("2"));
+		await BUSD.connect(user2.signer).mint(ethers.utils.parseEther("2"));
+		await BUSD.connect(user2.signer).approve(main.address, ethers.utils.parseEther("2"));
+
+		await BUSD.connect(user3.signer).mint(ethers.utils.parseEther("2"));
+		await BUSD.connect(user3.signer).approve(main.address, ethers.utils.parseEther("2"));
 
 		expect(await main.getCurrentPeriod()).to.be.equals(Period.Subscription);
 
@@ -70,6 +70,10 @@ makeSuite('Campaign-lottery-3', (testEnv: TestEnv) => {
 		await advanceBlock(info[0].subEnd.toNumber());
 		expect(await main.getCurrentPeriod()).to.be.equals(Period.Setup);
 
+		//mock random value
+		await RandomProvider.setRequestId(ethers.utils.formatBytes32String("ok"), main.address);
+		await main.connect(admin).tallyPrepare();
+		await RandomProvider.fulfillRandomness(ethers.utils.formatBytes32String("ok"), "36182639440450741575202689230877903979908723051233706145827570538348168242976");
 		await main.connect(admin).tallySubscriptionAuto()
 
 		await main.peekTally();

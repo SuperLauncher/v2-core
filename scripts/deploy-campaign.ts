@@ -9,12 +9,11 @@ async function main() {
 	const [generic, guaranteed, live, lottery, overSubscribe, lpProvision, vesting]
 	= await deployLibraries();
 
+	var factoryAddress = "0x5278F23d20Ec38858b3961503dA94090A7245E3f"
+	const managerAddress = "0x754815fc857AC3F309185352E85Cd1dCD346b87e";
 
-	var factoryAddress = "0xE3dE5849Cbc210Bb082671D8A7B6b99471862C02"
-	const managerAddress = "0x31F3E72971e73a022c4609807c88927C96b00E6a";
-
-	var token = "0x3F4B6AA4E01f76961860C3971b0e40D5eC5c7E9F"
-	const campaignOwner = "0xD507283f873837057Bc551aD9f46cbe60C8C79AA";
+	var token = "0x7f036189460D4C7fB03A5d032Dc5bEe714605528"
+	const campaignOwner = "0x3c16B4237EC2E06b2370Cf4C7a72F0e22d9cdBA3";
 
 	const Manager = await ethers.getContractFactory("Manager");
 	const manager = await Manager.attach(managerAddress);
@@ -59,9 +58,9 @@ async function main() {
 
 	const now = new BigNumber(Math.round(new Date().getTime() / 1000).toString()).plus(60 * 2);
 	const amstart = now;
-	const amaEnd = now.plus(60 * 4);
-	const startDateSub = amaEnd.plus(60 * 1);//new BigNumber("1631504733");
-	const endDateSub = startDateSub.plus(60 * 5); //10 min
+	const amaEnd = now.plus(60 * 5);
+	const startDateSub = amaEnd.plus(60 * 2);//new BigNumber("1631504733");
+	const endDateSub = startDateSub.plus(60 * 15); //10 min
 
 	const startDateBuy = endDateSub.plus(60 * 5);//10 min
 	const privateIDO = 60 * 5;
@@ -71,7 +70,7 @@ async function main() {
 	const liquidityTime = endDateBuy.plus(60 * 5);//5 min
 
 	const designUnLockTime = endDateBuy.plus(60 * 9);//5 min
-	const snapShotId = "7"
+	const snapShotId = "6"
 
 	console.log("done");
 	console.debug("ama start: ", amstart.toString());
@@ -86,12 +85,12 @@ async function main() {
 	await waitForTx(await myCampaign.initialize(
 		token, //token
 		[startDateSub.toString(), endDateSub.toString(), startDateBuy.toString(), endDateBuy.toString()], //dates
-		[ethers.utils.parseEther('10000').toString(), ethers.utils.parseEther('100000').toString()], //softCap, hardCap
+		[ethers.utils.parseEther('10000').toString(), ethers.utils.parseEther('200000').toString()], //softCap, hardCap
 		ethers.utils.parseEther('1000000').toString(), //buyQuantity
-		[snapShotId, ethers.utils.parseEther('1000').toString(), ethers.utils.parseEther('1500'), ethers.utils.parseEther('1').toString()],
+		[snapShotId, ethers.utils.parseEther('200').toString(), ethers.utils.parseEther('400'), ethers.utils.parseEther('1').toString()],
 		//snapShotId, minGuaranteedFloorAmt (in bnb), eggBurnForOverSubscribe (in egg)
-		[ethers.utils.parseEther('100').toString(), ethers.utils.parseEther('5000').toString()], //_buyLimits
-		"0xbaC85Ff271b63737AFb763cE5a61b9c3d642c8F1",//bnb
+		[ethers.utils.parseEther('1500').toString(), ethers.utils.parseEther('5000').toString()], //_buyLimits
+		"0x7861439745F137a4Ad01045A3482110573688692",//bnb
 		0
 	));
 

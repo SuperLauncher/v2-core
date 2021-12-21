@@ -19,7 +19,7 @@ makeSuite('Vesting-flow-linear-test', (testEnv: TestEnv) => {
 	});
 
 	it('Should able to claim', async () => {
-		const { admin, users } = testEnv;
+		const { admin, users, RandomProvider } = testEnv;
 		const info = await main.getCampaignInfo();
 		//start Sub
 		await advanceBlock(info[0].subStart.toNumber());
@@ -28,6 +28,10 @@ makeSuite('Vesting-flow-linear-test', (testEnv: TestEnv) => {
 		//tally
 		await increaseTimeAndMine(60 * 2);
 		expect(await main.getCurrentPeriod()).to.be.equals(Period.Setup);
+		//mock random value
+		await RandomProvider.setRequestId(ethers.utils.formatBytes32String("ok"), main.address);
+		await main.connect(admin).tallyPrepare();
+		await RandomProvider.fulfillRandomness(ethers.utils.formatBytes32String("ok"), "36182639440450741575202689230877903979908723051233706145827570538348168242976");
 		await waitForTx(
 			await main.connect(admin).tallySubscriptionAuto()
 		);

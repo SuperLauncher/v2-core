@@ -1,6 +1,7 @@
 import { Factory } from './../../types/Factory.d';
 import { MintableToken } from './../../types/MintableToken.d';
-import { deploySVLaunch, deployEgg, deployRole, deployManager, deployMintableToken, deployFactory } from './contracts-helpers';
+import { MockRandomProvider } from './../../types/MockRandomProvider.d';
+import { deploySVLaunch, deployEgg, deployRole, deployManager, deployMintableToken, deployFactory, deployMockRandomProvider } from './contracts-helpers';
 import { evmRevert, evmSnapshot, DRE, waitForTx } from './misc-utils';
 import { Signer } from 'ethers';
 import { ethers } from 'hardhat';
@@ -31,6 +32,7 @@ export interface TestEnv {
 	factory: Factory,
 	XYX: MintableToken,
 	Token9dp: MintableToken,
+	RandomProvider: MockRandomProvider,
 }
 
 const testEnv: TestEnv = {
@@ -51,6 +53,7 @@ const testEnv: TestEnv = {
 	XYX: {} as MintableToken,
 	Token9dp: {} as MintableToken,
 	busd: {} as MintableToken,
+	RandomProvider: {} as MockRandomProvider,
 } as TestEnv;
 
 let buidlerevmSnapshotId: string = '0x1';
@@ -133,6 +136,13 @@ export async function initializeMakeSuite() {
 		role.address
 	);
 	testEnv.manager = manager;
+
+    const randomProvider = await deployMockRandomProvider(manager.address);
+
+	testEnv.RandomProvider   = randomProvider;
+	
+	await manager.setRandomProvider(randomProvider.address);
+
 	//deploy currencies
 	const busd = await deployMintableToken("BUSD", "BUSD", "18");
 	const usdt = await deployMintableToken("USDT", "USDT", "18");

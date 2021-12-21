@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.10;
 
 import "../lib/DataTypes.sol";
 import "../lib/Constant.sol";
@@ -35,7 +35,8 @@ library Generic {
         
         _require(buyLimitsPublic[0] > 0 && buyLimitsPublic[0] < buyLimitsPublic[1], Error.Code.ValidationError);
         _require(subInfo[0] > 0 && subInfo[1] > 0 && subInfo[2] > 0, Error.Code.ValidationError);
-       
+        _require(feePcnt <= Constant.PCNT_100, Error.Code.ValidationError);
+
         // After this setup, the basic config is done.
         DataTypes.Data storage data = store.data;
         DataTypes.Guaranteed storage guaranteed = store.guaranteed;
@@ -72,7 +73,6 @@ library Generic {
         
         // Currency
         store.data.currency = currency;
-        
     }
     
     function getSubscriptionResult(DataTypes.Store storage store, address user) external view returns (DataTypes.SubscriptionResultParams memory) {

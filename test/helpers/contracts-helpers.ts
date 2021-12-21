@@ -9,6 +9,7 @@ import { ethers } from 'hardhat';
 import { V2SvL } from '../../types/V2SvL';
 import { EggV2 } from '../../types/EggV2';
 import { eContractid, tEthereumAddress, ILpProvision } from './types';
+import { MockRandomProvider } from '../../types/MockRandomProvider';
 
 export const deployContract = async <ContractType extends Contract>(
 	contractName: string,
@@ -46,6 +47,14 @@ export const deployEgg = async () => {
 
 export const deployRole = async () => {
 	const instance = await deployContract<RolesRegistry>(eContractid.Role, []);
+	return instance;
+}
+
+export const deployMockRandomProvider = async (manager: tEthereumAddress) => {
+	const args: string[] = [
+		manager,
+	];
+	const instance = await deployContract<MockRandomProvider>("MockRandomProvider", args);
 	return instance;
 }
 

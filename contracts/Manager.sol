@@ -1,17 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.10;
 
 import "./interfaces/IManager.sol";
 import "./interfaces/ILpProvider.sol";
 import "./interfaces/IRoleAccess.sol";
 import "./interfaces/ICampaign.sol";
+import "./interfaces/IRandomProvider.sol";
 import "./interfaces/IUniswapV2Router02.sol";
 import "./lib/Constant.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract Manager is IManager, ILpProvider {
 
     IRoleAccess private _roles;
+    address private _randomProvider;
+
     address private _feeVault;
     address private immutable _svLaunchAddress;
     address private immutable _eggAddress;
@@ -37,6 +41,10 @@ contract Manager is IManager, ILpProvider {
     event CampaignAdded(address indexed contractAddress, address indexed projectOwner);
     event CampaignCancelled(address indexed contractAddress);
     event FeeVaultChanged(address from, address to);
+    event SetLpProvider(uint index, address router, address factory);
+    event EnableCurrency(address currency, bool enable);
+    event AddCurrency(address currency);
+    event SetRandomProvider(address provider);
     event DaoMultiSigEmergencyWithdraw(address contractAddress, address to, address tokenAddress, uint amount);
     
     
@@ -67,9 +75,9 @@ contract Manager is IManager, ILpProvider {
     
     // Supported LP Providers
     mapping(uint => LpProviderInfo) private _lpProvidersMap;
-     
     
-    constructor(address svLaunchAddress, address eggAddress, address feeVault, IRoleAccess rolesRegistry) {
+    constructor(address svLaunchAddress, address eggAddress, address feeVault, IRoleAccess rolesRegistry)
+    {
         _svLaunchAddress = svLaunchAddress;
         _eggAddress = eggAddress;
         _setFeeVault(feeVault);
@@ -79,7 +87,6 @@ contract Manager is IManager, ILpProvider {
          _supportedCurrency.push(Constant.ZERO_ADDRESS);
          _supportedCurrencyMap[Constant.ZERO_ADDRESS] = true;
     }
-    
     
     //--------------------//
     // EXTERNAL FUNCTIONS //
@@ -117,16 +124,21 @@ contract Manager is IManager, ILpProvider {
     function addCurrency(address[] memory tokenAddress) external onlyAdmin {
         
         uint len = tokenAddress.length;
+        address token;
         for (uint n=0; n<len; n++) {
-            if (!_currencyExist(tokenAddress[n])) {
-                _supportedCurrency.push(tokenAddress[n]);
-                _supportedCurrencyMap[tokenAddress[n]] = true;
+            token = tokenAddress[n];
+            if (!_currencyExist(token)) {
+                _supportedCurrency.push(token);
+                _supportedCurrencyMap[token] = true;
+                emit AddCurrency(token);
             }
         }
+
     }
     
     function enableCurrency(address tokenAddress, bool enable) external onlyAdmin {
         _supportedCurrencyMap[tokenAddress] = enable;
+        emit EnableCurrency(tokenAddress, enable);
     }
 
     //------------------------//
@@ -138,6 +150,10 @@ contract Manager is IManager, ILpProvider {
         _indexCampaignMap[_count] = CampaignInfo(newContract, projectOwner, Status.Active);
         _addressIndexMap[newContract] = _count;
         emit CampaignAdded(newContract, projectOwner);
+
+        // All the new campaign to access RandomProvider
+        require(_randomProvider != address(0), "Errors.INVALID_ADDRESS");
+        IRandomProvider(_randomProvider).grantAccess(newContract);
     }
     
     function cancelCampaign(address contractAddress) external onlyAdmin {
@@ -178,6 +194,20 @@ contract Manager is IManager, ILpProvider {
     function getRoles() external view override returns (IRoleAccess) {
         return _roles;
     }
+
+    function getRandomProvider() external view override returns (IRandomProvider) {
+        return IRandomProvider(_randomProvider);
+    }
+
+    function setRandomProvider(address provider) external onlyAdmin {
+        require(provider != address(0), "Errors.INVALID_ADDRESS");
+        _randomProvider = provider;
+        emit SetRandomProvider(provider);
+    }
+
+    //------------------------//
+    // IMPLEMENTS ILpProvider //
+    //------------------------//
     
     function getLpProvider(DataTypes.LpProvider provider) external view override returns (address, address) {
          LpProviderInfo memory item = _lpProvidersMap[uint(provider)];
@@ -205,6 +235,7 @@ contract Manager is IManager, ILpProvider {
     function setLpProvider(uint index, address router, address factory) external onlyAdmin {
         require(router != address(0) && factory != address(0), "Errors.INVALID_ADDRESS");
         _lpProvidersMap[index] = LpProviderInfo(router, factory, true);
+        emit SetLpProvider(index, router, factory);
     }
     
     //--------------------//

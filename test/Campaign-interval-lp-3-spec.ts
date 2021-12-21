@@ -43,10 +43,10 @@ makeSuite('Campaign-lp-3', (testEnv: TestEnv) => {
 
 
 	// 2) .MAX (use soft cap as LP provision)
-//  No Fee%, campaign just hit soft cap.
-// - after finishUp, campaign owner get back 0 bnb as the full soft cap is used for LP
+	//  No Fee%, campaign just hit soft cap.
+	// - after finishUp, campaign owner get back 0 bnb as the full soft cap is used for LP
 	it('After finishUp, campaign owner get back 0 busd as the full soft cap is used for LP', async () => {
-	const { admin, users, BUSD } = testEnv;
+		const { admin, users, BUSD, RandomProvider } = testEnv;
 		const user1 = users[0]
 		const user2 = users[1]
 		//approval
@@ -65,6 +65,11 @@ makeSuite('Campaign-lp-3', (testEnv: TestEnv) => {
 		await advanceBlock(info[0].subEnd.toNumber());
 
 		expect(await main.getCurrentPeriod()).to.be.equals(Period.Setup);
+		//mock random value
+		await RandomProvider.setRequestId(ethers.utils.formatBytes32String("ok"), main.address);
+		await main.connect(admin).tallyPrepare();
+		await RandomProvider.fulfillRandomness(ethers.utils.formatBytes32String("ok"), "36182639440450741575202689230877903979908723051233706145827570538348168242976");
+
 		await waitForTx(
 			await main.connect(admin).tallySubscriptionAuto()
 		);
@@ -99,7 +104,7 @@ makeSuite('Campaign-lp-3', (testEnv: TestEnv) => {
 		await main.claimFunds();
 
 		const fundOutAmtAT = await BUSD.balanceOf(await admin.getAddress());
-// campaign owner get back 0 bnb 
+		// campaign owner get back 0 bnb 
 		expect("0").to.be.equals(fundOutAmtAT.sub(fundOutAmtBF));
 
 	});

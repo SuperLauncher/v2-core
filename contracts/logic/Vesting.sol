@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.10;
 
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "../lib/DataTypes.sol";
@@ -11,6 +11,16 @@ library Vesting {
     
     using Math for uint256;
     
+    event SetupVestingPeriods(
+        DataTypes.VestingReleaseType investorReleaseType,
+        DataTypes.VestingReleaseType teamReleaseType,
+        uint desiredUnlockTime,
+        uint[] investorLockPcnts,
+        uint[] investorLockDurations,
+        uint[] teamLockPcnts,   
+        uint[] teamLockDurations
+    );
+
     function setup(
         DataTypes.Vesting storage param,
         DataTypes.VestingReleaseType investorReleaseType,
@@ -41,6 +51,16 @@ library Vesting {
         param.data.teamLock.pcnts = teamLockPcnts;
         param.data.teamLock.durations = teamLockDurations;
         param.data.teamLock.releaseType = teamReleaseType;
+
+         emit SetupVestingPeriods( 
+             investorReleaseType, 
+             teamReleaseType, 
+             desiredUnlockTime, 
+             investorLockPcnts, 
+             investorLockDurations, 
+             teamLockPcnts, 
+             teamLockDurations
+        );
     }
     
     // Note: This is used to override the desiredUnlockTime to current time. This is triggered from AddAndLockLP only.

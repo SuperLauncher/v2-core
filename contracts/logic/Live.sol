@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.10;
 
 import "../lib/DataTypes.sol";
 import "../lib/Error.sol";
 
 library Live {
     
+    event SetupWhiteListFcfs(uint duration, uint[] minAmt, uint[] maxAmt);
+    event AddRemoveWhitelistFcfs(address[] addresses, uint tier, bool add);
+
     // Note: At least 1 tier (min, max) is required
     function setupWhiteListFcfs(
         DataTypes.Live storage param,
@@ -28,6 +31,8 @@ library Live {
         for (uint n=0; n<len; n++) {
             param.data.tiers.push(DataTypes.Tier(minAmt[n], maxAmt[n]));
         }
+
+        emit SetupWhiteListFcfs(duration, minAmt, maxAmt);
     }
     
      // Note: If a user appears in multiple whitelist tier, we will only take the first tier found
@@ -61,6 +66,8 @@ library Live {
         for (uint n=0; n<len; n++) {
             param.whitelistMap[tier][addresses[n]] = add;
         }
+
+        emit  AddRemoveWhitelistFcfs(addresses, tier, add);
     }
     
     function getAllocLeftForLive(DataTypes.Live storage param) public view returns (uint) {

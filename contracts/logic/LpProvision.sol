@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.10;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -15,7 +15,32 @@ import "../interfaces/IUniswapV2Factory.sol";
 library LpProvision {
     
     using SafeERC20 for ERC20;
-        
+                
+    event SetupLP(
+        DataTypes.LpSize size,
+        uint sizeParam,
+        uint rate, 
+        uint softCap,
+        uint hardCap,
+        address tokenA,
+        address currency,
+        bool swapToBnbBasedLp
+    );
+
+    event SetupLPLocks(
+        DataTypes.LpProvider[] providers, 
+        uint[] splits, 
+        uint[] lockPcnts, 
+        uint[] lockDurations,
+        ILpProvider provider
+    );
+
+    event SwapCurrencyToWBnb(
+        uint fundAmt, 
+        uint minWBnbAmountOut, 
+        ILpProvider provider
+    );
+
     function setup(
         DataTypes.Lp storage param,
         DataTypes.LpSize size,
@@ -43,6 +68,8 @@ library LpProvision {
         // Need swap before LP provision ?
         // Currently, we only support swap from raised currency to BNB
         param.swap.needSwap = swapToBnbBasedLp;
+
+        emit SetupLP( size, sizeParam, rate, softCap, hardCap, tokenA, currency, swapToBnbBasedLp);
     }
     
     function setupLocks(
@@ -76,6 +103,7 @@ library LpProvision {
         for (uint n=0; n<len;n++) {
             param.result.claimed.push(false);
         }
+        emit   SetupLPLocks( providers, splits, lockPcnts, lockDurations, provider);
     }
     
     function reset(DataTypes.Lp storage param) private {
@@ -203,6 +231,11 @@ library LpProvision {
         path[0] = param.data.currency;
         path[1] = wbnb;
         
+        // Get Bnb Min Out 
+        uint[] memory amountOutMins = IUniswapV2Router02(router).getAmountsOut(fundAmt, path);
+        uint amtOut = amountOutMins[path.length - 1];
+        _require( (minWBnbAmountOut * Constant.BNB_SWAP_MIN_PCNT)/Constant.PCNT_100 >= amtOut, Error.Code.SwapMinOutTooSmall);
+
         if (!ERC20(param.data.currency).approve(router, fundAmt)) { return false; }
         
         (uint[] memory amounts) = IUniswapV2Router02(router).swapExactTokensForTokens(
@@ -217,8 +250,13 @@ library LpProvision {
         // Update
         param.swap.swapped = true;
         param.swap.newCurrencyAmount = amounts[1];
+
+        emit SwapCurrencyToWBnb(fundAmt, minWBnbAmountOut, provider);
         return true;
     }
+
+  
+
     
     // Note: This is the max amount needed. Any extra will be refunded.
     function getMinMaxFundRequiredForLp(DataTypes.Lp storage param) private view returns (uint, uint) {

@@ -22,7 +22,7 @@ makeSuite('Campaign-lottery-2', (testEnv: TestEnv) => {
 	});
 
 	it('Should able refund excess & refund fund when campaign is cancelled', async () => {
-		const { admin, users, eggV2, manager } = testEnv;
+		const { admin, users, eggV2, manager, RandomProvider } = testEnv;
 
 		const info = await main.getCampaignInfo();
 		//start Sub
@@ -64,6 +64,10 @@ makeSuite('Campaign-lottery-2', (testEnv: TestEnv) => {
 		await advanceBlock(info[0].subEnd.toNumber());
 		expect(await main.getCurrentPeriod()).to.be.equals(Period.Setup);
 
+		//mock random value
+		await RandomProvider.setRequestId(ethers.utils.formatBytes32String("ok"), main.address);
+		await main.connect(admin).tallyPrepare();
+		await RandomProvider.fulfillRandomness(ethers.utils.formatBytes32String("ok"), "36182639440450741575202689230877903979908723051233706145827570538348168242976");
 		await main.connect(admin).tallySubscriptionAuto()
 
 		await main.peekTally();

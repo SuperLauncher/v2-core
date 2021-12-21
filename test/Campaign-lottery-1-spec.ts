@@ -22,7 +22,7 @@ makeSuite('Campaign-lottery-1', (testEnv: TestEnv) => {
 	});
 
 	it('Should able to subscribe', async () => {
-		const { admin, users, eggV2 } = testEnv;
+		const { admin, users, eggV2, RandomProvider } = testEnv;
 
 		const info = await main.getCampaignInfo();
 		//start Sub
@@ -64,6 +64,10 @@ makeSuite('Campaign-lottery-1', (testEnv: TestEnv) => {
 		await advanceBlock(info[0].subEnd.toNumber());
 		expect(await main.getCurrentPeriod()).to.be.equals(Period.Setup);
 
+		//mock random value
+		await RandomProvider.setRequestId(ethers.utils.formatBytes32String("ok"), main.address);
+		await main.connect(admin).tallyPrepare();
+		await RandomProvider.fulfillRandomness(ethers.utils.formatBytes32String("ok"), "36182639440450741575202689230877903979908723051233706145827570538348168242976");
 		await main.connect(admin).tallySubscriptionAuto()
 
 		await main.peekTally();
@@ -182,7 +186,7 @@ makeSuite('Campaign-lottery-1', (testEnv: TestEnv) => {
 		const refund = await main.getRefundable(user1.address);
 
 		const eggBalanceAT = await eggV2.balanceOf(user1.address);
-		const bnbBalanceAT = await ethers.provider.getBalance(user1.address); 
+		const bnbBalanceAT = await ethers.provider.getBalance(user1.address);
 		expect(refund[0]).to.be.equals(true);
 
 		if (!resultUser1.wonLottery && !resultUser1.wonOverSub) {
@@ -206,7 +210,7 @@ makeSuite('Campaign-lottery-1', (testEnv: TestEnv) => {
 			expect(delta).to.be.equals(true);
 			expect(eggBalanceAT.sub(eggBalanceBF)).to.be.equals(ethers.utils.parseEther("1"));
 		}
-		
+
 		await main.connect(user2.signer).refundExcess();
 
 		// await expect(await main.connect(user2.signer).refundExcess()).to.be.revertedWith(Code.AlreadyRefunded.toString());

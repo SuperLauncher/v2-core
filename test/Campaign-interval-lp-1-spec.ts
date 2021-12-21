@@ -45,7 +45,7 @@ makeSuite('Campaign-lp-1', (testEnv: TestEnv) => {
 	// - after finishUp, campaign owner get back his full raised bnb
 
 	it('After finishUp, campaign owner get back his full raised busd', async () => {
-		const { admin, users, BUSD } = testEnv;
+		const { admin, users, BUSD, RandomProvider } = testEnv;
 		const user1 = users[0]
 		const user2 = users[1]
 		//approval
@@ -64,6 +64,11 @@ makeSuite('Campaign-lp-1', (testEnv: TestEnv) => {
 		await advanceBlock(info[0].subEnd.toNumber());
 
 		expect(await main.getCurrentPeriod()).to.be.equals(Period.Setup);
+		//mock random value
+		await RandomProvider.setRequestId(ethers.utils.formatBytes32String("ok"), main.address);
+		await main.connect(admin).tallyPrepare();
+		await RandomProvider.fulfillRandomness(ethers.utils.formatBytes32String("ok"), "36182639440450741575202689230877903979908723051233706145827570538348168242976");
+
 		await waitForTx(
 			await main.connect(admin).tallySubscriptionAuto()
 		);

@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.10;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./DataStore.sol";
 import "../interfaces/IManager.sol";
@@ -17,7 +18,7 @@ import "../logic/Vesting.sol";
 import "../logic/LpProvision.sol";
 import "../logic/History.sol";
 
-contract MainWorkflow is DataStore {
+contract MainWorkflow is DataStore, ReentrancyGuard {
     
     using SafeERC20 for ERC20;
     using Generic for *;
@@ -85,7 +86,8 @@ contract MainWorkflow is DataStore {
         
         // History
         // Data1 : Bit 0: Guaranteed | Bit 1 onwards: Amount in Currency
-        // Data2 : 120 bits: OverSub Amt, 120 bits: EggBurnAmt, 8 bits: Priority 
+        // Data2 : 120 bits: OverSub Amt, 120 bits: EggBurnAmt, 16 bits: Priority 
+         _require(amtBasic <= type(uint256).max >> 1 && amtOverSub <= type(uint120).max && priority <= type(uint16).max && eggTotalQty <= type(uint120).max, Error.Code.ValidationError);
          uint pack1 = (amtBasic << 1) | (isGuaranteed ? 1 : 0);
          uint pack2 = (amtOverSub) | (eggTotalQty << 120) | (priority << 240);
         _history().record(DataTypes.ActionType.Subscribe, msg.sender, pack1, pack2, true);
@@ -118,7 +120,7 @@ contract MainWorkflow is DataStore {
     
     // Note: finishUp can only be called once
     // If a campaign is aborted, the campaignOwner will have o call fundOut() to get back their tokens.
-    function finishUp() external {
+    function finishUp() external nonReentrant {
         
          // Can call finishUp only after Public IDO ended OR hardCap is met //
          bool ok = (!_isAborted() && 
@@ -171,19 +173,19 @@ contract MainWorkflow is DataStore {
     }
 
      // Refund any excess/un-used fund from subscription //
-    function refundExcess() external {
+    function refundExcess() external nonReentrant {
         (bool refunded, uint capital, uint egg) = getRefundable(msg.sender);
         _require(!refunded && getState(DataTypes.Ok.Tally), Error.Code.CannotRefundExcess);
 
-        _transferOut(msg.sender, capital, DataTypes.FundType.Currency);
-        _transferOut(msg.sender, egg, DataTypes.FundType.Egg);
-    
         _subscriptions().items[msg.sender].refundedUnusedCapital = true;
         _history().record(DataTypes.ActionType.RefundExcess, msg.sender, capital, egg, true);
+
+        _transferOut(msg.sender, capital, DataTypes.FundType.Currency);
+        _transferOut(msg.sender, egg, DataTypes.FundType.Egg);
     }
     
     // Note: when a campaign did not hit softCap, or cancelled, users get a full refund.
-    function returnFund() external {
+    function returnFund() external nonReentrant {
         _require( (_store().finalState == DataTypes.FinalState.Failure ||
             _store().finalState == DataTypes.FinalState.Aborted) && 
             _store().returnFunds.amount[msg.sender]==0, Error.Code.CannotReturnFund);
@@ -281,11 +283,11 @@ contract MainWorkflow is DataStore {
         _history().record(DataTypes.ActionType.FundIn, msg.sender, amtAcknowledged, false);
     }
     
-    // Note : CampaignOwner can fun out in these situations
+    // Note : CampaignOwner can fund out in these situations
     // 1. During setup Period
     // 2. When IDO ended & softcap not met 
     // 3. Aborted campaign
-    function _fundOut(uint amtAcknowledged) internal {
+    function _fundOut(uint amtAcknowledged) internal nonReentrant {
         _require( getState(DataTypes.Ok.FundedIn) && 
             (_isPeriod(DataTypes.Period.Setup) || _store().finalState == DataTypes.FinalState.Failure || _isAborted()) && 
             getFundInTokenRequired() == amtAcknowledged, Error.Code.ValidationError);
@@ -318,7 +320,7 @@ contract MainWorkflow is DataStore {
         _setState(DataTypes.Ok.Tally, true);
     }
 
-    function _claim(bool investor) internal {
+    function _claim(bool investor) internal nonReentrant {
         _claim(investor, _vesting().updateClaim(msg.sender, investor));
     }
 
