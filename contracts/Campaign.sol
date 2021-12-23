@@ -147,8 +147,9 @@ contract Campaign is ICampaign, MainWorkflow {
     }
    
     // To swap the amount used for LP to BNB with the purpose of creating a XYZ/BNB Pair LP token.
-    function swapToWBnbBase(uint minAmountOut) external onlyDeployer {
-        _lp().swapCurrencyToWBnb(getLpFund(), minAmountOut, _getLpInterface());
+    function swapToWBnbBase(uint maxSlippagePercent) external onlyDeployer {
+        IBnbOracle oracle = _manager.getBnbOracle();
+        _lp().swapCurrencyToWBnb(getLpFund(), maxSlippagePercent, oracle, _getLpInterface());
     }
     
     // Note: overrideStartVest: if set to true, will change the vesting's desiredUnlockTime to current time once LP is provided.

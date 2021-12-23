@@ -10,6 +10,7 @@ import "../lib/Error.sol";
 import "../interfaces/ILpProvider.sol";
 import "../interfaces/IUniswapV2Router02.sol";
 import "../interfaces/IUniswapV2Factory.sol";
+import "../interfaces/IBnbOracle.sol";
 
 
 library LpProvision {
@@ -213,12 +214,14 @@ library LpProvision {
         return (true, tokenAmtUsed, currencyAmtUsed);
     }
 
+
     // Use PCS to swap the base currency into BNB
-    function swapCurrencyToWBnb(DataTypes.Lp storage param, uint fundAmt, uint minWBnbAmountOut, ILpProvider provider) external returns (bool) {
+    function swapCurrencyToWBnb(DataTypes.Lp storage param, uint fundAmt, uint maxSlippagePercent, IBnbOracle oracle, ILpProvider provider) external returns (bool) {
         
         // Can only swap 1 time successfully
         _require(param.swap.needSwap && !param.swap.swapped, Error.Code.ValidationError);
-       
+        _require( maxSlippagePercent <= Constant.BNB_SWAP_MAX_SLIPPAGE_PCNT, Error.Code.SwapExceededMaxSlippage);
+
         // Use pancakeswap to swap
         (address router, ) = provider.getLpProvider(DataTypes.LpProvider.PancakeSwap);
     
@@ -231,16 +234,14 @@ library LpProvision {
         path[0] = param.data.currency;
         path[1] = wbnb;
         
-        // Get Bnb Min Out 
-        uint[] memory amountOutMins = IUniswapV2Router02(router).getAmountsOut(fundAmt, path);
-        uint amtOut = amountOutMins[path.length - 1];
-        _require( (minWBnbAmountOut * Constant.BNB_SWAP_MIN_PCNT)/Constant.PCNT_100 >= amtOut, Error.Code.SwapMinOutTooSmall);
+        (int rate, uint8 dp) = oracle.getRate(param.data.currency);
+        uint minWBnbOut = (fundAmt * uint(rate) * (Constant.PCNT_100 - maxSlippagePercent)) / (10**dp * Constant.PCNT_100);
 
         if (!ERC20(param.data.currency).approve(router, fundAmt)) { return false; }
         
         (uint[] memory amounts) = IUniswapV2Router02(router).swapExactTokensForTokens(
             fundAmt,
-            minWBnbAmountOut,
+            minWBnbOut,
             path,
             address(this),
             block.timestamp + 100000000);
@@ -251,7 +252,7 @@ library LpProvision {
         param.swap.swapped = true;
         param.swap.newCurrencyAmount = amounts[1];
 
-        emit SwapCurrencyToWBnb(fundAmt, minWBnbAmountOut, provider);
+        emit SwapCurrencyToWBnb(fundAmt, minWBnbOut, provider);
         return true;
     }
 

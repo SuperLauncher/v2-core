@@ -4,6 +4,7 @@ pragma solidity 0.8.10;
 
 import "./IRoleAccess.sol";
 import "./IRandomProvider.sol";
+import "./IBnbOracle.sol";
 
 
 interface IManager {
@@ -13,5 +14,6 @@ interface IManager {
     function getEggAddress() external view returns (address);
     function getRoles() external view returns (IRoleAccess);
     function getRandomProvider() external view returns (IRandomProvider);
+    function getBnbOracle() external view returns (IBnbOracle);
 }
 

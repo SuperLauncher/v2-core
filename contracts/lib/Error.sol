@@ -38,7 +38,7 @@ library Error {
         ValueExceeded,
         LpNotCreated,
         Aborted,
-        SwapMinOutTooSmall
+        SwapExceededMaxSlippage
     }
 
     

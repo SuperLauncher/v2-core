@@ -15,6 +15,7 @@ contract Manager is IManager, ILpProvider {
 
     IRoleAccess private _roles;
     address private _randomProvider;
+    address private _bnbOracle;
 
     address private _feeVault;
     address private immutable _svLaunchAddress;
@@ -45,8 +46,8 @@ contract Manager is IManager, ILpProvider {
     event EnableCurrency(address currency, bool enable);
     event AddCurrency(address currency);
     event SetRandomProvider(address provider);
+    event SetBnbOracle(address oracle);
     event DaoMultiSigEmergencyWithdraw(address contractAddress, address to, address tokenAddress, uint amount);
-    
     
     struct CampaignInfo {
         address contractAddress;
@@ -204,6 +205,19 @@ contract Manager is IManager, ILpProvider {
         _randomProvider = provider;
         emit SetRandomProvider(provider);
     }
+
+    function getBnbOracle() external view override returns (IBnbOracle) {
+        return IBnbOracle(_bnbOracle);
+    }
+
+    function setBnbOracle(address oracle) external onlyAdmin {
+        require(oracle != address(0), "Errors.INVALID_ADDRESS");
+        _bnbOracle = oracle;
+        emit SetBnbOracle(oracle);
+    }
+
+    
+
 
     //------------------------//
     // IMPLEMENTS ILpProvider //
